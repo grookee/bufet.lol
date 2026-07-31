@@ -1,9 +1,7 @@
 ---
-import config from "../../config/photos.json";
-import thoughts from "../../config/thoughts.json";
+import site from "../../config/site.json";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Header from "../components/Header.astro";
-import Collage from "../components/Collage.astro";
 import StickyNotes from "../components/StickyNotes.astro";
 import Footer from "../components/Footer.astro";
 
@@ -49,18 +47,17 @@ const notes = [
         delay: 3.2,
     },
 ];
-
-const defaultThoughts = thoughts;
-const thoughtsJson = JSON.stringify(defaultThoughts);
 ---
 
 <BaseLayout>
     <Header
-        title={config.title}
-        subtitle={config.subtitle}
-        tagline={config.tagline}
+        title={site.title}
+        subtitle={site.subtitle}
+        tagline={site.tagline}
     />
-    <Collage photos={config.photos} />
+
+    <div class="collage" id="collage"></div>
+
     <StickyNotes notes={notes} />
 
     <div id="drunk-thought"></div>
@@ -68,13 +65,87 @@ const thoughtsJson = JSON.stringify(defaultThoughts);
 
     <Footer />
 
-    <script
-        id="thoughts-data"
-        type="application/json"
-        set:html={thoughtsJson}
-    />
+    <style>
+        .collage {
+            position: relative; z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem 4rem;
+            column-count: 3;
+            column-gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) { .collage { column-count: 2; } }
+        @media (max-width: 640px)  { .collage { column-count: 1; } }
+
+        .collage-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-family: "Fredoka", sans-serif;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .polaroid {
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 1.5rem;
+            break-inside: avoid;
+            background: #fff;
+            padding: .75rem .75rem 2.2rem;
+            border-radius: 3px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.06);
+            transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease;
+            position: relative;
+        }
+
+        .polaroid:hover {
+            transform: scale(1.03) rotate(var(--hover-rot,0deg)) !important;
+            box-shadow: 0 14px 35px rgba(0,0,0,.18), 0 4px 10px rgba(0,0,0,.1);
+        }
+
+        .polaroid img {
+            width: 100%; height: auto; display: block; border-radius: 2px;
+            aspect-ratio: auto;
+        }
+
+        .polaroid .caption {
+            font-weight: 700;
+            font-size: 1rem;
+            text-align: center;
+            margin-top: .55rem;
+            color: #444;
+            letter-spacing: .02em;
+            text-transform: lowercase;
+        }
+
+        .polaroid .tape {
+            position: absolute;
+            top: 6px; left: 50%;
+            width: 80px; height: 14px;
+            margin-left: -40px;
+            background: rgba(255,255,255,.55);
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            transform: rotate(-3deg);
+            pointer-events: none;
+        }
+    </style>
 
     <script>
+        const rotations = [
+            { rot: -2, hoverRot: -1 },
+            { rot: 3,  hoverRot:  1 },
+            { rot: -4, hoverRot: -2 },
+            { rot: 5,  hoverRot:  2 },
+            { rot: -3, hoverRot: -1 },
+            { rot: 2,  hoverRot:  1 },
+            { rot: -6, hoverRot: -3 },
+            { rot: 4,  hoverRot:  2 },
+        ];
+
         // ── s p i l l  e f f e c t ──
         (function spill() {
             const colors = ["#cdb4db", "#ffc8dd", "#bde0fe", "#a2d2ff"];
@@ -92,46 +163,65 @@ const thoughtsJson = JSON.stringify(defaultThoughts);
             }
         })();
 
-        // ── l i v e  f e t c h  (update photos + thoughts from server) ──
-        (async function liveFetch() {
+        // ── d a t a  l o a d e r  (photos + thoughts from API) ──
+        (async function load() {
+            let photos = [];
+            let thoughts = [];
+
             try {
-                const res = await fetch("/api/config");
-                if (!res.ok) return;
-                const data = await res.json();
-                if (data.photos && data.photos.length) {
-                    // check if different from static
-                    const staticCollage = document.querySelector(".collage");
-                    if (staticCollage && data.photos.length > 0) {
-                        // replace guess
-                    }
+                const r = await fetch("/api/config");
+                if (r.ok) {
+                    const d = await r.json();
+                    photos = Array.isArray(d.photos) ? d.photos : [];
+                    thoughts = Array.isArray(d.thoughts) ? d.thoughts : [];
+                    localStorage.setItem("bufet_thoughts", JSON.stringify(thoughts));
                 }
             } catch {}
-        })();
 
-        // ── d r u n k  t h o u g h t s ──
-        (function thoughts() {
-            let list;
-            try {
-                const el = document.getElementById("thoughts-data");
-                list = el ? JSON.parse(el.textContent) : ["loading..."];
-            } catch {
-                list = ["loading..."];
+            if (!thoughts.length) {
+                try {
+                    const cached = JSON.parse(localStorage.getItem("bufet_thoughts") || "[]");
+                    if (Array.isArray(cached) && cached.length) thoughts = cached;
+                } catch {}
             }
 
-            // try to fetch live thoughts
-            fetch("/api/config")
-                .then((r) => r.ok && r.json())
-                .then((d) => {
-                    if (d && d.thoughts && d.thoughts.length) {
-                        list = d.thoughts;
-                        localStorage.setItem(
-                            "bufet_thoughts",
-                            JSON.stringify(d.thoughts),
-                        );
-                    }
-                })
-                .catch(() => {});
+            renderCollage(photos);
+            initThoughts(thoughts);
+        })();
 
+        function esc(s) {
+            const d = document.createElement("div");
+            d.textContent = String(s ?? "");
+            return d.innerHTML;
+        }
+
+        function renderCollage(photos) {
+            const el = document.getElementById("collage");
+            if (!el) return;
+
+            if (!photos.length) {
+                el.innerHTML = '<div class="collage-empty">még nincs itt semmi 🌱</div>';
+                return;
+            }
+
+            el.innerHTML = "";
+            photos.forEach((p, i) => {
+                const r = rotations[i % rotations.length];
+                const card = document.createElement("div");
+                card.className = "polaroid";
+                card.style.transform = `rotate(${r.rot}deg)`;
+                card.style.setProperty("--hover-rot", `${r.hoverRot}deg`);
+                card.innerHTML = `
+              <img src="${esc(p.path)}" alt="${esc(p.caption)}" loading="lazy" />
+              <div class="caption">${esc(p.caption)}</div>
+              <div class="tape"></div>
+            `;
+                el.appendChild(card);
+            });
+        }
+
+        // ── d r u n k  t h o u g h t s ──
+        function initThoughts(list) {
             const el = document.getElementById("drunk-thought");
             if (!el) return;
             const pick = () => {
@@ -151,7 +241,7 @@ const thoughtsJson = JSON.stringify(defaultThoughts);
         padding: .6rem 1.2rem; border-radius: 999px; box-shadow: 0 4px 16px rgba(0,0,0,.1);
         transition: opacity .6s; opacity: 0; max-width: 90vw; white-space: nowrap;
       `;
-        })();
+        }
 
         // ── s p a r k l e  o n  s c r o l l ──
         (function sparkle() {
