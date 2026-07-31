@@ -548,6 +548,11 @@ const configJson = JSON.stringify({ token: TOKEN });
               body: formData,
             });
             if (r.status === 401) { showToast('token rejected', true); return; }
+            if (!r.ok) {
+              const j = await r.json().catch(() => ({}));
+              showToast((j && j.error) || 'upload failed', true);
+              return;
+            }
             path = (await r.json()).path;
           } catch {
             showToast('upload failed — is the server running?', true);

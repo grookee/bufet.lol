@@ -133,7 +133,11 @@ app.post<{ Body: { thoughts: unknown } }>('/api/save-thoughts', async (req, repl
 });
 
 async function start() {
-  await app.register(fastifyMultipart);
+  await app.register(fastifyMultipart, {
+    limits: {
+      fileSize: 25 * 1024 * 1024,
+    },
+  });
 
   app.post('/api/upload', async (req, reply) => {
     if (!auth(req, reply)) return;
@@ -147,6 +151,9 @@ async function start() {
 
     const chunks: Buffer[] = [];
     for await (const chunk of file.file) chunks.push(chunk);
+    if (file.file.truncated) {
+      return reply.status(413).send({ error: 'file too large (max 25MB)' });
+    }
     writeFileSync(dest, Buffer.concat(chunks));
 
     return { path: `/photos/${filename}` };
