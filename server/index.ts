@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, extname, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomBytes } from 'crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { config } from 'dotenv';
 
 config();
@@ -23,17 +24,50 @@ const CONFIG_DIR = join(ROOT, 'config');
 mkdirSync(DATA_DIR, { recursive: true });
 mkdirSync(PHOTOS_DIR, { recursive: true });
 
-function seedDataFile(name: string) {
-  const dest = join(DATA_DIR, name);
-  if (!existsSync(dest)) {
-    const src = join(CONFIG_DIR, name);
-    if (existsSync(src)) writeFileSync(dest, readFileSync(src));
-    else writeFileSync(dest, name.endsWith('json') ? '[]' : '');
+const db = new DatabaseSync(join(DATA_DIR, 'bufet.db'));
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    path TEXT NOT NULL,
+    caption TEXT NOT NULL DEFAULT '',
+    position INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS thoughts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text TEXT NOT NULL,
+    position INTEGER NOT NULL
+  );
+`);
+
+function seedDatabase() {
+  const { n } = db.prepare('SELECT COUNT(*) AS n FROM photos').get() as { n: number };
+  if (n > 0) return;
+
+  const seedPath = join(CONFIG_DIR, 'seed.json');
+  if (!existsSync(seedPath)) return;
+  const seed = JSON.parse(readFileSync(seedPath, 'utf-8'));
+
+  const insertPhoto = db.prepare('INSERT INTO photos (path, caption, position) VALUES (?, ?, ?)');
+  const insertThought = db.prepare('INSERT INTO thoughts (text, position) VALUES (?, ?)');
+
+  db.exec('BEGIN');
+  try {
+    (seed.photos ?? []).forEach((p: { path: string; caption?: string }, i: number) => {
+      insertPhoto.run(p.path, p.caption ?? '', i);
+    });
+    (seed.thoughts ?? []).forEach((t: string, i: number) => {
+      insertThought.run(t, i);
+    });
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
   }
 }
 
-seedDataFile('photos.json');
-seedDataFile('thoughts.json');
+seedDatabase();
 
 function auth(req: { headers: { authorization?: string } }, reply: { status: (code: number) => { send: (body: unknown) => void } }): boolean {
   if (req.headers.authorization !== `Bearer ${TOKEN}`) {
@@ -43,30 +77,40 @@ function auth(req: { headers: { authorization?: string } }, reply: { status: (co
   return true;
 }
 
-function readJSON(p: string) {
-  return JSON.parse(readFileSync(p, 'utf-8'));
+function getPhotos() {
+  return db
+    .prepare('SELECT path, caption FROM photos ORDER BY position')
+    .all() as { path: string; caption: string }[];
 }
 
-function writeJSON(p: string, data: unknown) {
-  writeFileSync(p, JSON.stringify(data, null, 2));
+function getThoughts() {
+  return (db.prepare('SELECT text FROM thoughts ORDER BY position').all() as { text: string }[]).map((t) => t.text);
 }
 
 const app = Fastify({ logger: true });
 
 app.get('/api/config', async () => {
-  const photosRaw = readJSON(join(DATA_DIR, 'photos.json'));
-  const photos = Array.isArray(photosRaw) ? photosRaw : (photosRaw.photos ?? []);
-  const thoughtsRaw = readJSON(join(DATA_DIR, 'thoughts.json'));
-  const thoughts = Array.isArray(thoughtsRaw) ? thoughtsRaw : (thoughtsRaw.thoughts ?? []);
-  return { photos, thoughts };
+  return { photos: getPhotos(), thoughts: getThoughts() };
 });
 
 app.post<{ Body: { photos: unknown } }>('/api/save-photos', async (req, reply) => {
   if (!auth(req, reply)) return;
   const { photos } = req.body;
   if (!Array.isArray(photos)) return reply.status(400).send({ error: 'photos must be an array' });
-  writeJSON(join(DATA_DIR, 'photos.json'), { photos });
-  try { writeJSON(join(CONFIG_DIR, 'photos.json'), { photos }); } catch {}
+
+  const stmt = db.prepare('INSERT INTO photos (path, caption, position) VALUES (?, ?, ?)');
+  db.exec('BEGIN');
+  try {
+    db.exec('DELETE FROM photos');
+    photos.forEach((p: unknown, i: number) => {
+      const { path = '', caption = '' } = (p ?? {}) as { path?: string; caption?: string };
+      stmt.run(String(path), String(caption), i);
+    });
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
   return { ok: true };
 });
 
@@ -74,8 +118,17 @@ app.post<{ Body: { thoughts: unknown } }>('/api/save-thoughts', async (req, repl
   if (!auth(req, reply)) return;
   const { thoughts } = req.body;
   if (!Array.isArray(thoughts)) return reply.status(400).send({ error: 'thoughts must be an array' });
-  writeJSON(join(DATA_DIR, 'thoughts.json'), thoughts);
-  try { writeJSON(join(CONFIG_DIR, 'thoughts.json'), thoughts); } catch {}
+
+  const stmt = db.prepare('INSERT INTO thoughts (text, position) VALUES (?, ?)');
+  db.exec('BEGIN');
+  try {
+    db.exec('DELETE FROM thoughts');
+    thoughts.forEach((t: unknown, i: number) => stmt.run(String(t), i));
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
   return { ok: true };
 });
 
