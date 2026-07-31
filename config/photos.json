@@ -1,0 +1,20 @@
+{
+  "photos": [
+    { "path": "https://picsum.photos/seed/good-soup/400/500", "caption": "good soup" },
+    { "path": "https://picsum.photos/seed/dancing-queen/600/400", "caption": "dancing queen" },
+    { "path": "https://picsum.photos/seed/tehe/300/400", "caption": "tehe" },
+    { "path": "https://picsum.photos/seed/meow/500/500", "caption": "meow" },
+    { "path": "https://picsum.photos/seed/absolutely-feral/400/600", "caption": "absolutely feral" },
+    { "path": "https://picsum.photos/seed/blorp/300/300", "caption": "blorp" },
+    { "path": "https://picsum.photos/seed/vibes-only/600/450", "caption": "vibes only" },
+    { "path": "https://picsum.photos/seed/mlem/350/500", "caption": "mlem" },
+    { "path": "https://picsum.photos/seed/snack-time/450/350", "caption": "snack time" },
+    { "path": "https://picsum.photos/seed/hehe/300/400", "caption": "hehe" },
+    { "path": "https://picsum.photos/seed/besties/500/400", "caption": "besties" },
+    { "path": "https://picsum.photos/seed/oops/350/350", "caption": "oops" },
+    { "path": "https://picsum.photos/seed/chaos-goblin/400/550", "caption": "chaos goblin" },
+    { "path": "https://picsum.photos/seed/hot-mess/550/400", "caption": "hot mess" },
+    { "path": "https://picsum.photos/seed/yeet/300/300", "caption": "yeet" },
+    { "path": "https://picsum.photos/seed/feral-energy/500/550", "caption": "feral energy" }
+  ]
+}

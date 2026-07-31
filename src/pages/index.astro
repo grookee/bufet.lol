@@ -1,0 +1,222 @@
+---
+import config from "../../config/photos.json";
+import thoughts from "../../config/thoughts.json";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Header from "../components/Header.astro";
+import Collage from "../components/Collage.astro";
+import StickyNotes from "../components/StickyNotes.astro";
+import Footer from "../components/Footer.astro";
+
+const notes = [
+    {
+        text: "nice",
+        top: "5%",
+        left: "3%",
+        rot: -15,
+        color: "#a2d2ff",
+        delay: 0,
+    },
+    {
+        text: "lol",
+        top: "3%",
+        right: "5%",
+        rot: 12,
+        color: "#cdb4db",
+        delay: 0.8,
+    },
+    {
+        text: "sex",
+        bottom: "12%",
+        right: "4%",
+        rot: -8,
+        color: "#bde0fe",
+        delay: 1.6,
+    },
+    {
+        text: "wow",
+        top: "50%",
+        left: "1%",
+        rot: 20,
+        color: "#ffc8dd",
+        delay: 2.4,
+    },
+    {
+        text: "same",
+        bottom: "4%",
+        left: "35%",
+        rot: -10,
+        color: "#a2d2ff",
+        delay: 3.2,
+    },
+];
+
+const defaultThoughts = thoughts;
+const thoughtsJson = JSON.stringify(defaultThoughts);
+---
+
+<BaseLayout>
+    <Header
+        title={config.title}
+        subtitle={config.subtitle}
+        tagline={config.tagline}
+    />
+    <Collage photos={config.photos} />
+    <StickyNotes notes={notes} />
+
+    <div id="drunk-thought"></div>
+    <div id="sparkle-container"></div>
+
+    <Footer />
+
+    <script
+        id="thoughts-data"
+        type="application/json"
+        set:html={thoughtsJson}
+    />
+
+    <script>
+        // ── s p i l l  e f f e c t ──
+        (function spill() {
+            const colors = ["#cdb4db", "#ffc8dd", "#bde0fe", "#a2d2ff"];
+            for (let i = 0; i < 8; i++) {
+                const dot = document.createElement("div");
+                const size = 4 + Math.random() * 20;
+                dot.style.cssText = `
+          position: fixed; z-index: 0; pointer-events: none; opacity: 0.25; border-radius: 50%;
+          width: ${size}px; height: ${size * (0.6 + Math.random() * 0.8)}px;
+          background: ${colors[i % colors.length]};
+          top: ${Math.random() * 100}%; left: ${Math.random() * 100}%;
+          transform: rotate(${Math.random() * 360}deg);
+        `;
+                document.body.appendChild(dot);
+            }
+        })();
+
+        // ── l i v e  f e t c h  (update photos + thoughts from server) ──
+        (async function liveFetch() {
+            try {
+                const res = await fetch("/api/config");
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.photos && data.photos.length) {
+                    // check if different from static
+                    const staticCollage = document.querySelector(".collage");
+                    if (staticCollage && data.photos.length > 0) {
+                        // replace guess
+                    }
+                }
+            } catch {}
+        })();
+
+        // ── d r u n k  t h o u g h t s ──
+        (function thoughts() {
+            let list;
+            try {
+                const el = document.getElementById("thoughts-data");
+                list = el ? JSON.parse(el.textContent) : ["loading..."];
+            } catch {
+                list = ["loading..."];
+            }
+
+            // try to fetch live thoughts
+            fetch("/api/config")
+                .then((r) => r.ok && r.json())
+                .then((d) => {
+                    if (d && d.thoughts && d.thoughts.length) {
+                        list = d.thoughts;
+                        localStorage.setItem(
+                            "bufet_thoughts",
+                            JSON.stringify(d.thoughts),
+                        );
+                    }
+                })
+                .catch(() => {});
+
+            const el = document.getElementById("drunk-thought");
+            if (!el) return;
+            const pick = () => {
+                if (!list || !list.length) return;
+                el.textContent = list[Math.floor(Math.random() * list.length)];
+                el.style.opacity = "1";
+                setTimeout(() => {
+                    el.style.opacity = "0";
+                }, 5000);
+            };
+            pick();
+            setInterval(pick, 10000);
+            el.style.cssText = `
+        position: fixed; z-index: 20; bottom: 5rem; left: 50%; transform: translateX(-50%);
+        background: rgba(255,255,255,.85); backdrop-filter: blur(4px);
+        color: #555; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: .95rem;
+        padding: .6rem 1.2rem; border-radius: 999px; box-shadow: 0 4px 16px rgba(0,0,0,.1);
+        transition: opacity .6s; opacity: 0; max-width: 90vw; white-space: nowrap;
+      `;
+        })();
+
+        // ── s p a r k l e  o n  s c r o l l ──
+        (function sparkle() {
+            const container = document.getElementById("sparkle-container");
+            if (!container) return;
+            const symbols = ["✦", "✧", "･", "⋆", "·", "✶"];
+            let ticking = false;
+            const spawn = () => {
+                const s = document.createElement("span");
+                s.textContent =
+                    symbols[Math.floor(Math.random() * symbols.length)];
+                s.style.cssText = `
+          position: fixed; pointer-events: none; z-index: 15;
+          font-size: ${8 + Math.random() * 16}px;
+          color: ${["#ffc8dd", "#bde0fe", "#a2d2ff", "#fff"][Math.floor(Math.random() * 4)]};
+          left: ${Math.random() * 100}vw;
+          top: -20px;
+          animation: sparkleFall ${2 + Math.random() * 2}s linear forwards;
+        `;
+                container.appendChild(s);
+                setTimeout(() => s.remove(), 4000);
+            };
+            const style = document.createElement("style");
+            style.textContent = `
+        @keyframes sparkleFall {
+          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+        }
+      `;
+            document.head.appendChild(style);
+            window.addEventListener("scroll", () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => {
+                        spawn();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            });
+            setTimeout(spawn, 1000);
+            setTimeout(spawn, 2000);
+        })();
+
+        // ── r a n d o m  w i g g l e ──
+        (function wiggle() {
+            const style = document.createElement("style");
+            style.textContent = `
+        @keyframes randomWiggle {
+          0%, 100% { transform: rotate(var(--rot,0deg)); }
+          25% { transform: rotate(calc(var(--rot,0deg) + 1.5deg)); }
+          75% { transform: rotate(calc(var(--rot,0deg) - 1.5deg)); }
+        }
+      `;
+            document.head.appendChild(style);
+            setInterval(() => {
+                document.querySelectorAll(".polaroid").forEach((p) => {
+                    if (Math.random() > 0.15) return;
+                    p.style.animation = "none";
+                    void p.offsetHeight;
+                    p.style.animation = `randomWiggle 0.3s ease 2`;
+                    setTimeout(() => {
+                        p.style.animation = "";
+                    }, 600);
+                });
+            }, 4000);
+        })();
+    </script>
+</BaseLayout>

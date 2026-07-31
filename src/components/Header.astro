@@ -1,0 +1,75 @@
+---
+export interface Props {
+    title?: string;
+    subtitle?: string;
+    tagline?: string;
+}
+
+const {
+    title = "bufet.lol",
+    subtitle = "★ emlék szeméttelep ★",
+    tagline = "↙ &nbsp; gyönyörködj &nbsp; ↘",
+} = Astro.props;
+---
+
+<style>
+    .header {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        padding: 3rem 1.5rem 1rem;
+    }
+
+    .header h1 {
+        font-family: "Fredoka", sans-serif;
+        font-size: clamp(3rem, 10vw, 7rem);
+        font-weight: 700;
+        color: #fff;
+        text-shadow:
+            4px 4px 0 var(--purple),
+            7px 7px 0 rgba(0, 0, 0, 0.08);
+        letter-spacing: -0.02em;
+        line-height: 1;
+        display: inline-block;
+        transform: rotate(-2deg);
+    }
+
+    .sub {
+        font-size: clamp(1rem, 2.5vw, 1.5rem);
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.85);
+        margin-top: 0.25rem;
+        transform: rotate(1deg);
+        background: var(--purple);
+        display: inline-block;
+        padding: 0.2rem 1.2rem;
+        border-radius: 999px;
+        font-style: italic;
+    }
+
+    .arrow {
+        display: block;
+        font-size: 1.6rem;
+        margin-top: 0.5rem;
+        transform: rotate(12deg);
+        filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.1));
+        color: #fff;
+    }
+
+    .doodles {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        font-size: 1.8rem;
+        color: rgba(255, 255, 255, 0.5);
+        letter-spacing: 0.5em;
+        margin: -0.5rem 0 0.5rem;
+    }
+</style>
+
+<header class="header">
+    <h1>{title}</h1>
+    <div class="sub">{subtitle}</div>
+    <span class="arrow" set:html={tagline} />
+</header>
+<div class="doodles">~ ~ ~ ~ ~</div>

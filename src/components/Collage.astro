@@ -1,0 +1,53 @@
+---
+import Polaroid from './Polaroid.astro';
+
+export interface Photo {
+  path: string;
+  caption: string;
+}
+
+export interface Props {
+  photos: Photo[];
+}
+
+const { photos } = Astro.props;
+
+const rotations = [
+  { rot: -2, hoverRot: -1 },
+  { rot: 3,  hoverRot:  1 },
+  { rot: -4, hoverRot: -2 },
+  { rot: 5,  hoverRot:  2 },
+  { rot: -3, hoverRot: -1 },
+  { rot: 2,  hoverRot:  1 },
+  { rot: -6, hoverRot: -3 },
+  { rot: 4,  hoverRot:  2 },
+];
+---
+
+<style>
+  .collage {
+    position: relative; z-index: 2;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem 4rem;
+    column-count: 3;
+    column-gap: 1.5rem;
+  }
+
+  @media (max-width: 1024px) { .collage { column-count: 2; } }
+  @media (max-width: 640px)  { .collage { column-count: 1; } }
+</style>
+
+<div class="collage">
+  {photos.map((p, i) => {
+    const r = rotations[i % rotations.length];
+    return (
+      <Polaroid
+        src={p.path}
+        caption={p.caption}
+        rot={r.rot}
+        hoverRot={r.hoverRot}
+      />
+    );
+  })}
+</div>
