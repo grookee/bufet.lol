@@ -1,13 +1,8 @@
 ---
-import photosConfig from '../../config/photos.json';
-import thoughtsConfig from '../../config/thoughts.json';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Card from '../components/Card.astro';
 
 const TOKEN = process.env.BUFET_TOKEN || 'bufet';
-const photosData = photosConfig.photos;
-const thoughtsData = thoughtsConfig;
-const configJson = JSON.stringify({ token: TOKEN, photos: photosData, thoughts: thoughtsData });
+const configJson = JSON.stringify({ token: TOKEN });
 ---
 
 <BaseLayout title="dashboard — bufet.lol">
@@ -313,8 +308,8 @@ const configJson = JSON.stringify({ token: TOKEN, photos: photosData, thoughts: 
     (() => {
       const cfg = JSON.parse(document.getElementById('dash-data').textContent);
       const EMBEDDED_TOKEN = cfg.token;
-      let photos = cfg.photos;
-      let thoughts = cfg.thoughts;
+      let photos = [];
+      let thoughts = [];
 
       const STORAGE_KEY = 'bufet_token';
       const PHOTOS_KEY = 'bufet_photos';
