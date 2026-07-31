@@ -1,0 +1,36 @@
+---
+export interface Props {
+  variant?: 'rose' | 'ocean' | 'sky' | 'purple' | 'white';
+  padding?: string;
+}
+
+const { variant = 'white', padding = '1rem' } = Astro.props;
+
+const bg = {
+  rose: 'var(--rose)',
+  ocean: 'var(--ocean)',
+  sky: 'var(--sky)',
+  purple: 'var(--purple)',
+  white: '#fff',
+};
+---
+
+<div class="card" style={`padding: ${padding}; background: ${bg[variant]};`}>
+  <slot />
+</div>
+
+<style>
+  .card {
+    border-radius: 18px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.1), 0 0 0 3px rgba(255,255,255,.5);
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 12px 40px rgba(0,0,0,.16), 0 0 0 3px rgba(255,255,255,.5);
+  }
+</style>
